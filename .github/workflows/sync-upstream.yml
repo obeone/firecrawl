@@ -1,41 +1,28 @@
-name: Detect and Sync Upstream Changes (Main Branch Only)
+name: Sync with Upstream Repository
 
 on:
   schedule:
-    - cron: '0 * * * *' # Check every hour
-  workflow_dispatch: # Allow manual triggering
+    - cron: '0 * * * *' # Checks for updates every hour
+  workflow_dispatch: # Allows manual triggering
 
 jobs:
-  detect-and-sync:
+  sync-upstream:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # Required to push changes
 
     steps:
       # Step 1: Checkout the current repository
       - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetches the entire history for proper merging
 
-      # Step 2: Add the upstream remote
-      - name: Add Upstream Remote
-        run: |
-          git remote add upstream https://github.com/mendableai/firecrawl.git
-          git fetch upstream main
-
-      # Step 3: Compare the last commit on upstream/main with local/main
-      - name: Compare Upstream HEAD (Main Branch)
-        id: check_upstream
-        run: |
-          UPSTREAM_HEAD=$(git rev-parse upstream/main)
-          LOCAL_HEAD=$(git rev-parse origin/main)
-          echo "upstream_head=$UPSTREAM_HEAD" >> $GITHUB_ENV
-          echo "local_head=$LOCAL_HEAD" >> $GITHUB_ENV
-
-      # Step 4: Sync changes from upstream/main to origin/main if there are new updates
-      - name: Sync Changes (Main Branch)
-        if: env.upstream_head != env.local_head
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git checkout main
-          git config pull.rebase false
-          git pull upstream main
-          git push origin main
+      # Step 2: Merge changes from the upstream repository
+      - name: Merge Upstream Changes
+        uses: exions/merge-upstream@v1
+        with:
+          upstream: mendableai/firecrawl
+          upstream-branch: main
+          branch: main
