@@ -1,0 +1,40 @@
+name: Detect and Sync Upstream Changes
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Check every hour
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  detect-and-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the current repository
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Step 2: Add the upstream remote
+      - name: Add Upstream Remote
+        run: |
+          git remote add upstream https://github.com/mendableai/firecrawl.git
+          git fetch upstream
+
+      # Step 3: Compare the last commit on upstream
+      - name: Compare Upstream HEAD
+        id: check_upstream
+        run: |
+          UPSTREAM_HEAD=$(git rev-parse upstream/main)
+          LOCAL_HEAD=$(git rev-parse origin/main)
+          echo "upstream_head=$UPSTREAM_HEAD" >> $GITHUB_ENV
+          echo "local_head=$LOCAL_HEAD" >> $GITHUB_ENV
+
+      # Step 4: Sync changes if upstream has new commits
+      - name: Sync Changes
+        if: env.upstream_head != env.local_head
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git checkout main
+          git pull upstream main
+          git push origin main
