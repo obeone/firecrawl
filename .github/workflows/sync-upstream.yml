@@ -1,4 +1,4 @@
-name: Detect and Sync Upstream Changes
+name: Detect and Sync Upstream Changes (Main Branch Only)
 
 on:
   schedule:
@@ -18,10 +18,10 @@ jobs:
       - name: Add Upstream Remote
         run: |
           git remote add upstream https://github.com/mendableai/firecrawl.git
-          git fetch upstream
+          git fetch upstream main
 
-      # Step 3: Compare the last commit on upstream
-      - name: Compare Upstream HEAD
+      # Step 3: Compare the last commit on upstream/main with local/main
+      - name: Compare Upstream HEAD (Main Branch)
         id: check_upstream
         run: |
           UPSTREAM_HEAD=$(git rev-parse upstream/main)
@@ -29,12 +29,13 @@ jobs:
           echo "upstream_head=$UPSTREAM_HEAD" >> $GITHUB_ENV
           echo "local_head=$LOCAL_HEAD" >> $GITHUB_ENV
 
-      # Step 4: Sync changes if upstream has new commits
-      - name: Sync Changes
+      # Step 4: Sync changes from upstream/main to origin/main if there are new updates
+      - name: Sync Changes (Main Branch)
         if: env.upstream_head != env.local_head
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git checkout main
+          git config pull.rebase false
           git pull upstream main
           git push origin main
